@@ -698,6 +698,10 @@ func execLoginLink(b *OGame, loginLink string) ([]byte, error) {
 	return wrapperReadBody(b, resp)
 }
 
+func ReadBody(resp *http.Response) (respContent []byte, bytesDownloaded int64, err error) {
+	return readBody(resp)
+}
+
 func readBody(resp *http.Response) (respContent []byte, bytesDownloaded int64, err error) {
 	isGzip := false
 	var reader io.ReadCloser
@@ -5272,6 +5276,31 @@ func (b *OGame) IsUnderAttack() (bool, error) {
 // GetCachedPlayer returns cached player infos
 func (b *OGame) GetCachedPlayer() UserInfos {
 	return b.Player
+}
+
+// GetCachedHasAdmiral returns cached hasAdmiral infos
+func (b *OGame) GetCachedHasAdmiral() bool {
+	return b.hasAdmiral
+}
+
+// GetCachedHasEngineer returns cached hasEngineer infos
+func (b *OGame) GetCachedHasEngineer() bool {
+	return b.hasEngineer
+}
+
+// GetCachedHasGeologist returns cached hasGeologist infos
+func (b *OGame) GetCachedHasGeologist() bool {
+	return b.hasGeologist
+}
+
+// GetCachedHasTechnocrat returns cached hasTechnocrat infos
+func (b *OGame) GetCachedHasTechnocrat() bool {
+	return b.hasTechnocrat
+}
+
+// GetCachedHasCommander returns cached hasCommander infos
+func (b *OGame) GetCachedHasCommander() bool {
+	return b.hasCommander
 }
 
 // GetCachedPreferences returns cached preferences

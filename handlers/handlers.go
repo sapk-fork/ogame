@@ -1,19 +1,15 @@
-package ogame
+package handlers
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
-
-	"github.com/pquerna/otp"
-	"github.com/pquerna/otp/totp"
 
 	"github.com/labstack/echo"
+
+	"github.com/alaingilbert/ogame"
 )
 
 // APIResp ...
@@ -48,26 +44,26 @@ func HomeHandler(c echo.Context) error {
 
 // TasksHandler return how many tasks are queued in the heap.
 func TasksHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	return c.JSON(http.StatusOK, SuccessResp(bot.GetTasks()))
 }
 
 // GetServerHandler ...
 func GetServerHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	return c.JSON(http.StatusOK, SuccessResp(bot.GetServer()))
 }
 
 // GetServerDataHandler ...
 func GetServerDataHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
-	return c.JSON(http.StatusOK, SuccessResp(bot.serverData))
+	bot := c.Get("bot").(*ogame.OGame)
+	return c.JSON(http.StatusOK, SuccessResp(bot.GetServerData()))
 }
 
 // SetUserAgentHandler ...
 // curl 127.0.0.1:1234/bot/set-user-agent -d 'userAgent="New user agent"'
 func SetUserAgentHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	userAgent := c.Request().PostFormValue("userAgent")
 	bot.SetUserAgent(userAgent)
 	return c.JSON(http.StatusOK, SuccessResp(nil))
@@ -75,20 +71,20 @@ func SetUserAgentHandler(c echo.Context) error {
 
 // ServerURLHandler ...
 func ServerURLHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	return c.JSON(http.StatusOK, SuccessResp(bot.ServerURL()))
 }
 
 // GetLanguageHandler ...
 func GetLanguageHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	return c.JSON(http.StatusOK, SuccessResp(bot.GetLanguage()))
 }
 
 // PageContentHandler ...
 // curl 127.0.0.1:1234/bot/page-content -d 'page=overview&cp=123'
 func PageContentHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	if err := c.Request().ParseForm(); err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
 	}
@@ -98,9 +94,9 @@ func PageContentHandler(c echo.Context) error {
 
 // LoginHandler ...
 func LoginHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	if _, err := bot.LoginWithExistingCookies(); err != nil {
-		if err == ErrBadCredentials {
+		if err == ogame.ErrBadCredentials {
 			return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
 		}
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
@@ -110,50 +106,50 @@ func LoginHandler(c echo.Context) error {
 
 // LogoutHandler ...
 func LogoutHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	bot.Logout()
 	return c.JSON(http.StatusOK, SuccessResp(nil))
 }
 
 // GetUsernameHandler ...
 func GetUsernameHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	return c.JSON(http.StatusOK, SuccessResp(bot.GetUsername()))
 }
 
 // GetUniverseNameHandler ...
 func GetUniverseNameHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	return c.JSON(http.StatusOK, SuccessResp(bot.GetUniverseName()))
 }
 
 // GetUniverseSpeedHandler ...
 func GetUniverseSpeedHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
-	return c.JSON(http.StatusOK, SuccessResp(bot.serverData.Speed))
+	bot := c.Get("bot").(*ogame.OGame)
+	return c.JSON(http.StatusOK, SuccessResp(bot.GetUniverseSpeed()))
 }
 
 // GetUniverseSpeedFleetHandler ...
 func GetUniverseSpeedFleetHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
-	return c.JSON(http.StatusOK, SuccessResp(bot.serverData.SpeedFleet))
+	bot := c.Get("bot").(*ogame.OGame)
+	return c.JSON(http.StatusOK, SuccessResp(bot.GetUniverseSpeedFleet()))
 }
 
 // ServerVersionHandler ...
 func ServerVersionHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
-	return c.JSON(http.StatusOK, SuccessResp(bot.serverData.Version))
+	bot := c.Get("bot").(*ogame.OGame)
+	return c.JSON(http.StatusOK, SuccessResp(bot.GetServerData().Version))
 }
 
 // ServerTimeHandler ...
 func ServerTimeHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	return c.JSON(http.StatusOK, SuccessResp(bot.ServerTime()))
 }
 
 // IsUnderAttackHandler ...
 func IsUnderAttackHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	isUnderAttack, err := bot.IsUnderAttack()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
@@ -163,61 +159,61 @@ func IsUnderAttackHandler(c echo.Context) error {
 
 // IsVacationModeHandler ...
 func IsVacationModeHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
-	isVacationMode := bot.isVacationModeEnabled
+	bot := c.Get("bot").(*ogame.OGame)
+	isVacationMode := bot.IsVacationModeEnabled()
 	return c.JSON(http.StatusOK, SuccessResp(isVacationMode))
 }
 
 // GetUserInfosHandler ...
 func GetUserInfosHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	return c.JSON(http.StatusOK, SuccessResp(bot.GetUserInfos()))
 }
 
 // GetCharacterClassHandler ...
 func GetCharacterClassHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	return c.JSON(http.StatusOK, SuccessResp(bot.CharacterClass()))
 }
 
 // HasCommanderHandler ...
 func HasCommanderHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
-	hasCommander := bot.hasCommander
+	bot := c.Get("bot").(*ogame.OGame)
+	hasCommander := bot.GetCachedHasCommander()
 	return c.JSON(http.StatusOK, SuccessResp(hasCommander))
 }
 
 // HasAdmiralHandler ...
 func HasAdmiralHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
-	hasAdmiral := bot.hasAdmiral
+	bot := c.Get("bot").(*ogame.OGame)
+	hasAdmiral := bot.GetCachedHasAdmiral()
 	return c.JSON(http.StatusOK, SuccessResp(hasAdmiral))
 }
 
 // HasEngineerHandler ...
 func HasEngineerHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
-	hasEngineer := bot.hasEngineer
+	bot := c.Get("bot").(*ogame.OGame)
+	hasEngineer := bot.GetCachedHasEngineer()
 	return c.JSON(http.StatusOK, SuccessResp(hasEngineer))
 }
 
 // HasGeologistHandler ...
 func HasGeologistHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
-	hasGeologist := bot.hasGeologist
+	bot := c.Get("bot").(*ogame.OGame)
+	hasGeologist := bot.GetCachedHasGeologist()
 	return c.JSON(http.StatusOK, SuccessResp(hasGeologist))
 }
 
 // HasTechnocratHandler ...
 func HasTechnocratHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
-	hasTechnocrat := bot.hasTechnocrat
+	bot := c.Get("bot").(*ogame.OGame)
+	hasTechnocrat := bot.GetCachedHasTechnocrat()
 	return c.JSON(http.StatusOK, SuccessResp(hasTechnocrat))
 }
 
 // GetEspionageReportMessagesHandler ...
 func GetEspionageReportMessagesHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	report, err := bot.GetEspionageReportMessages()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
@@ -227,7 +223,7 @@ func GetEspionageReportMessagesHandler(c echo.Context) error {
 
 // GetEspionageReportHandler ...
 func GetEspionageReportHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	msgID, err := strconv.ParseInt(c.Param("msgid"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid msgid id"))
@@ -241,7 +237,7 @@ func GetEspionageReportHandler(c echo.Context) error {
 
 // GetEspionageReportForHandler ...
 func GetEspionageReportForHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	galaxy, err := strconv.ParseInt(c.Param("galaxy"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid galaxy"))
@@ -254,7 +250,7 @@ func GetEspionageReportForHandler(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid position"))
 	}
-	planet, err := bot.GetEspionageReportFor(Coordinate{Type: PlanetType, Galaxy: galaxy, System: system, Position: position})
+	planet, err := bot.GetEspionageReportFor(ogame.Coordinate{Type: ogame.PlanetType, Galaxy: galaxy, System: system, Position: position})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
@@ -264,7 +260,7 @@ func GetEspionageReportForHandler(c echo.Context) error {
 // SendMessageHandler ...
 // curl 127.0.0.1:1234/bot/send-message -d 'playerID=123&message="Sup boi!"'
 func SendMessageHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	playerID, err := strconv.ParseInt(c.Request().PostFormValue("playerID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
@@ -281,31 +277,31 @@ func SendMessageHandler(c echo.Context) error {
 
 // GetFleetsHandler ...
 func GetFleetsHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	fleets, _ := bot.GetFleets()
 	return c.JSON(http.StatusOK, SuccessResp(fleets))
 }
 
 // GetSlotsHandler ...
 func GetSlotsHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	slots := bot.GetSlots()
 	return c.JSON(http.StatusOK, SuccessResp(slots))
 }
 
 // CancelFleetHandler ...
 func CancelFleetHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	fleetID, err := strconv.ParseInt(c.Param("fleetID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
 	}
-	return c.JSON(http.StatusOK, SuccessResp(bot.CancelFleet(FleetID(fleetID))))
+	return c.JSON(http.StatusOK, SuccessResp(bot.CancelFleet(ogame.FleetID(fleetID))))
 }
 
 // GetAttacksHandler ...
 func GetAttacksHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	attacks, err := bot.GetAttacks()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
@@ -315,7 +311,7 @@ func GetAttacksHandler(c echo.Context) error {
 
 // GalaxyInfosHandler ...
 func GalaxyInfosHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	galaxy, err := strconv.ParseInt(c.Param("galaxy"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
@@ -333,13 +329,13 @@ func GalaxyInfosHandler(c echo.Context) error {
 
 // GetResearchHandler ...
 func GetResearchHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	return c.JSON(http.StatusOK, SuccessResp(bot.GetResearch()))
 }
 
 // BuyOfferOfTheDayHandler ...
 func BuyOfferOfTheDayHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	if err := bot.BuyOfferOfTheDay(); err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
 	}
@@ -348,13 +344,13 @@ func BuyOfferOfTheDayHandler(c echo.Context) error {
 
 // GetMoonsHandler ...
 func GetMoonsHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	return c.JSON(http.StatusOK, SuccessResp(bot.GetMoons()))
 }
 
 // GetMoonHandler ...
 func GetMoonHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	moonID, err := strconv.ParseInt(c.Param("moonID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid moon id"))
@@ -368,7 +364,7 @@ func GetMoonHandler(c echo.Context) error {
 
 // GetMoonByCoordHandler ...
 func GetMoonByCoordHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	galaxy, err := strconv.ParseInt(c.Param("galaxy"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid galaxy"))
@@ -381,7 +377,7 @@ func GetMoonByCoordHandler(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid position"))
 	}
-	planet, err := bot.GetMoon(Coordinate{Type: MoonType, Galaxy: galaxy, System: system, Position: position})
+	planet, err := bot.GetMoon(ogame.Coordinate{Type: ogame.MoonType, Galaxy: galaxy, System: system, Position: position})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
@@ -390,18 +386,18 @@ func GetMoonByCoordHandler(c echo.Context) error {
 
 // GetPlanetsHandler ...
 func GetPlanetsHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	return c.JSON(http.StatusOK, SuccessResp(bot.GetPlanets()))
 }
 
 // GetCelestialItemsHandler ...
 func GetCelestialItemsHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	celestialID, err := strconv.ParseInt(c.Param("celestialID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid celestial id"))
 	}
-	items, err := bot.GetItems(CelestialID(celestialID))
+	items, err := bot.GetItems(ogame.CelestialID(celestialID))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
 	}
@@ -410,13 +406,13 @@ func GetCelestialItemsHandler(c echo.Context) error {
 
 // ActivateCelestialItemHandler ...
 func ActivateCelestialItemHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	celestialID, err := strconv.ParseInt(c.Param("celestialID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid celestial id"))
 	}
 	ref := c.Param("itemRef")
-	if err := bot.ActivateItem(ref, CelestialID(celestialID)); err != nil {
+	if err := bot.ActivateItem(ref, ogame.CelestialID(celestialID)); err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
 	}
 	return c.JSON(http.StatusOK, SuccessResp(nil))
@@ -424,12 +420,12 @@ func ActivateCelestialItemHandler(c echo.Context) error {
 
 // GetPlanetHandler ...
 func GetPlanetHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	planetID, err := strconv.ParseInt(c.Param("planetID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
 	}
-	planet, err := bot.GetPlanet(PlanetID(planetID))
+	planet, err := bot.GetPlanet(ogame.PlanetID(planetID))
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
@@ -438,7 +434,7 @@ func GetPlanetHandler(c echo.Context) error {
 
 // GetPlanetByCoordHandler ...
 func GetPlanetByCoordHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	galaxy, err := strconv.ParseInt(c.Param("galaxy"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid galaxy"))
@@ -451,7 +447,7 @@ func GetPlanetByCoordHandler(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid position"))
 	}
-	planet, err := bot.GetPlanet(Coordinate{Type: PlanetType, Galaxy: galaxy, System: system, Position: position})
+	planet, err := bot.GetPlanet(ogame.Coordinate{Type: ogame.PlanetType, Galaxy: galaxy, System: system, Position: position})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
@@ -460,12 +456,12 @@ func GetPlanetByCoordHandler(c echo.Context) error {
 
 // GetResourcesDetailsHandler ...
 func GetResourcesDetailsHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	planetID, err := strconv.ParseInt(c.Param("planetID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
 	}
-	resources, err := bot.GetResourcesDetails(CelestialID(planetID))
+	resources, err := bot.GetResourcesDetails(ogame.CelestialID(planetID))
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
@@ -474,12 +470,12 @@ func GetResourcesDetailsHandler(c echo.Context) error {
 
 // GetResourceSettingsHandler ...
 func GetResourceSettingsHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	planetID, err := strconv.ParseInt(c.Param("planetID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
 	}
-	res, err := bot.GetResourceSettings(PlanetID(planetID))
+	res, err := bot.GetResourceSettings(ogame.PlanetID(planetID))
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
@@ -489,7 +485,7 @@ func GetResourceSettingsHandler(c echo.Context) error {
 // SetResourceSettingsHandler ...
 // curl 127.0.0.1:1234/bot/planets/123/resource-settings -d 'metalMine=100&crystalMine=100&deuteriumSynthesizer=100&solarPlant=100&fusionReactor=100&solarSatellite=100'
 func SetResourceSettingsHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	planetID, err := strconv.ParseInt(c.Param("planetID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
@@ -522,7 +518,7 @@ func SetResourceSettingsHandler(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid crawler"))
 	}
-	settings := ResourceSettings{
+	settings := ogame.ResourceSettings{
 		MetalMine:            metalMine,
 		CrystalMine:          crystalMine,
 		DeuteriumSynthesizer: deuteriumSynthesizer,
@@ -531,8 +527,8 @@ func SetResourceSettingsHandler(c echo.Context) error {
 		SolarSatellite:       solarSatellite,
 		Crawler:              crawler,
 	}
-	if err := bot.SetResourceSettings(PlanetID(planetID), settings); err != nil {
-		if err == ErrInvalidPlanetID {
+	if err := bot.SetResourceSettings(ogame.PlanetID(planetID), settings); err != nil {
+		if err == ogame.ErrInvalidPlanetID {
 			return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
 		}
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
@@ -542,12 +538,12 @@ func SetResourceSettingsHandler(c echo.Context) error {
 
 // GetResourcesBuildingsHandler ...
 func GetResourcesBuildingsHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	planetID, err := strconv.ParseInt(c.Param("planetID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
 	}
-	res, err := bot.GetResourcesBuildings(CelestialID(planetID))
+	res, err := bot.GetResourcesBuildings(ogame.CelestialID(planetID))
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
@@ -556,12 +552,12 @@ func GetResourcesBuildingsHandler(c echo.Context) error {
 
 // GetDefenseHandler ...
 func GetDefenseHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	planetID, err := strconv.ParseInt(c.Param("planetID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
 	}
-	res, err := bot.GetDefense(CelestialID(planetID))
+	res, err := bot.GetDefense(ogame.CelestialID(planetID))
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
@@ -570,12 +566,12 @@ func GetDefenseHandler(c echo.Context) error {
 
 // GetShipsHandler ...
 func GetShipsHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	planetID, err := strconv.ParseInt(c.Param("planetID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
 	}
-	res, err := bot.GetShips(CelestialID(planetID))
+	res, err := bot.GetShips(ogame.CelestialID(planetID))
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
@@ -584,12 +580,12 @@ func GetShipsHandler(c echo.Context) error {
 
 // GetFacilitiesHandler ...
 func GetFacilitiesHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	planetID, err := strconv.ParseInt(c.Param("planetID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
 	}
-	res, err := bot.GetFacilities(CelestialID(planetID))
+	res, err := bot.GetFacilities(ogame.CelestialID(planetID))
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
@@ -598,7 +594,7 @@ func GetFacilitiesHandler(c echo.Context) error {
 
 // BuildHandler ...
 func BuildHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	planetID, err := strconv.ParseInt(c.Param("planetID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
@@ -611,7 +607,7 @@ func BuildHandler(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid nbr"))
 	}
-	if err := bot.Build(CelestialID(planetID), ID(ogameID), nbr); err != nil {
+	if err := bot.Build(ogame.CelestialID(planetID), ogame.ID(ogameID), nbr); err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
 	return c.JSON(http.StatusOK, SuccessResp(nil))
@@ -619,7 +615,7 @@ func BuildHandler(c echo.Context) error {
 
 // BuildCancelableHandler ...
 func BuildCancelableHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	planetID, err := strconv.ParseInt(c.Param("planetID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
@@ -628,7 +624,7 @@ func BuildCancelableHandler(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid ogame id"))
 	}
-	if err := bot.BuildCancelable(CelestialID(planetID), ID(ogameID)); err != nil {
+	if err := bot.BuildCancelable(ogame.CelestialID(planetID), ogame.ID(ogameID)); err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
 	return c.JSON(http.StatusOK, SuccessResp(nil))
@@ -636,7 +632,7 @@ func BuildCancelableHandler(c echo.Context) error {
 
 // BuildProductionHandler ...
 func BuildProductionHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	planetID, err := strconv.ParseInt(c.Param("planetID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
@@ -649,7 +645,7 @@ func BuildProductionHandler(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid nbr"))
 	}
-	if err := bot.BuildProduction(CelestialID(planetID), ID(ogameID), nbr); err != nil {
+	if err := bot.BuildProduction(ogame.CelestialID(planetID), ogame.ID(ogameID), nbr); err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
 	return c.JSON(http.StatusOK, SuccessResp(nil))
@@ -657,7 +653,7 @@ func BuildProductionHandler(c echo.Context) error {
 
 // BuildBuildingHandler ...
 func BuildBuildingHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	planetID, err := strconv.ParseInt(c.Param("planetID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
@@ -666,7 +662,7 @@ func BuildBuildingHandler(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid ogame id"))
 	}
-	if err := bot.BuildBuilding(CelestialID(planetID), ID(ogameID)); err != nil {
+	if err := bot.BuildBuilding(ogame.CelestialID(planetID), ogame.ID(ogameID)); err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
 	return c.JSON(http.StatusOK, SuccessResp(nil))
@@ -674,7 +670,7 @@ func BuildBuildingHandler(c echo.Context) error {
 
 // BuildTechnologyHandler ...
 func BuildTechnologyHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	planetID, err := strconv.ParseInt(c.Param("planetID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
@@ -683,7 +679,7 @@ func BuildTechnologyHandler(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid ogame id"))
 	}
-	if err := bot.BuildTechnology(CelestialID(planetID), ID(ogameID)); err != nil {
+	if err := bot.BuildTechnology(ogame.CelestialID(planetID), ogame.ID(ogameID)); err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
 	return c.JSON(http.StatusOK, SuccessResp(nil))
@@ -691,7 +687,7 @@ func BuildTechnologyHandler(c echo.Context) error {
 
 // BuildDefenseHandler ...
 func BuildDefenseHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	planetID, err := strconv.ParseInt(c.Param("planetID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
@@ -704,7 +700,7 @@ func BuildDefenseHandler(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid nbr"))
 	}
-	if err := bot.BuildDefense(CelestialID(planetID), ID(ogameID), nbr); err != nil {
+	if err := bot.BuildDefense(ogame.CelestialID(planetID), ogame.ID(ogameID), nbr); err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
 	return c.JSON(http.StatusOK, SuccessResp(nil))
@@ -712,7 +708,7 @@ func BuildDefenseHandler(c echo.Context) error {
 
 // BuildShipsHandler ...
 func BuildShipsHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	planetID, err := strconv.ParseInt(c.Param("planetID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
@@ -725,7 +721,7 @@ func BuildShipsHandler(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid nbr"))
 	}
-	if err := bot.BuildShips(CelestialID(planetID), ID(ogameID), nbr); err != nil {
+	if err := bot.BuildShips(ogame.CelestialID(planetID), ogame.ID(ogameID), nbr); err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
 	return c.JSON(http.StatusOK, SuccessResp(nil))
@@ -733,12 +729,12 @@ func BuildShipsHandler(c echo.Context) error {
 
 // GetProductionHandler ...
 func GetProductionHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	planetID, err := strconv.ParseInt(c.Param("planetID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
 	}
-	res, _, err := bot.GetProduction(CelestialID(planetID))
+	res, _, err := bot.GetProduction(ogame.CelestialID(planetID))
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
@@ -747,12 +743,12 @@ func GetProductionHandler(c echo.Context) error {
 
 // ConstructionsBeingBuiltHandler ...
 func ConstructionsBeingBuiltHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	planetID, err := strconv.ParseInt(c.Param("planetID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
 	}
-	buildingID, buildingCountdown, researchID, researchCountdown := bot.ConstructionsBeingBuilt(CelestialID(planetID))
+	buildingID, buildingCountdown, researchID, researchCountdown := bot.ConstructionsBeingBuilt(ogame.CelestialID(planetID))
 	return c.JSON(http.StatusOK, SuccessResp(
 		struct {
 			BuildingID        int64
@@ -770,12 +766,12 @@ func ConstructionsBeingBuiltHandler(c echo.Context) error {
 
 // CancelBuildingHandler ...
 func CancelBuildingHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	planetID, err := strconv.ParseInt(c.Param("planetID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
 	}
-	if err := bot.CancelBuilding(CelestialID(planetID)); err != nil {
+	if err := bot.CancelBuilding(ogame.CelestialID(planetID)); err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
 	return c.JSON(http.StatusOK, SuccessResp(nil))
@@ -783,12 +779,12 @@ func CancelBuildingHandler(c echo.Context) error {
 
 // CancelResearchHandler ...
 func CancelResearchHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	planetID, err := strconv.ParseInt(c.Param("planetID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
 	}
-	if err := bot.CancelResearch(CelestialID(planetID)); err != nil {
+	if err := bot.CancelResearch(ogame.CelestialID(planetID)); err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
 	return c.JSON(http.StatusOK, SuccessResp(nil))
@@ -796,12 +792,12 @@ func CancelResearchHandler(c echo.Context) error {
 
 // GetResourcesHandler ...
 func GetResourcesHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	planetID, err := strconv.ParseInt(c.Param("planetID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
 	}
-	res, err := bot.GetResources(CelestialID(planetID))
+	res, err := bot.GetResources(ogame.CelestialID(planetID))
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
@@ -818,7 +814,7 @@ func GetPriceHandler(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid nbr"))
 	}
-	ogameObj := Objs.ByID(ID(ogameID))
+	ogameObj := ogame.Objs.ByID(ogame.ID(ogameID))
 	if ogameObj != nil {
 		price := ogameObj.GetPrice(nbr)
 		return c.JSON(http.StatusOK, SuccessResp(price))
@@ -829,7 +825,7 @@ func GetPriceHandler(c echo.Context) error {
 // SendFleetHandler ...
 // curl 127.0.0.1:1234/bot/planets/123/send-fleet -d 'ships=203,1&ships=204,10&speed=10&galaxy=1&system=1&type=1&position=1&mission=3&metal=1&crystal=2&deuterium=3'
 func SendFleetHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	planetID, err := strconv.ParseInt(c.Param("planetID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
@@ -839,34 +835,34 @@ func SendFleetHandler(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid form"))
 	}
 
-	var ships []Quantifiable
-	where := Coordinate{Type: PlanetType}
-	mission := Transport
+	var ships []ogame.Quantifiable
+	where := ogame.Coordinate{Type: ogame.PlanetType}
+	mission := ogame.Transport
 	var duration int64
 	var unionID int64
-	payload := Resources{}
-	speed := HundredPercent
+	payload := ogame.Resources{}
+	speed := ogame.HundredPercent
 	for key, values := range c.Request().PostForm {
 		switch key {
 		case "ships":
 			for _, s := range values {
 				a := strings.Split(s, ",")
 				shipID, err := strconv.ParseInt(a[0], 10, 64)
-				if err != nil || !IsShipID(shipID) {
+				if err != nil || !ogame.IsShipID(shipID) {
 					return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid ship id "+a[0]))
 				}
 				nbr, err := strconv.ParseInt(a[1], 10, 64)
 				if err != nil || nbr < 0 {
 					return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid nbr "+a[1]))
 				}
-				ships = append(ships, Quantifiable{ID: ID(shipID), Nbr: nbr})
+				ships = append(ships, ogame.Quantifiable{ID: ogame.ID(shipID), Nbr: nbr})
 			}
 		case "speed":
 			speedInt, err := strconv.ParseInt(values[0], 10, 64)
 			if err != nil || speedInt < 0 || speedInt > 10 {
 				return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid speed"))
 			}
-			speed = Speed(speedInt)
+			speed = ogame.Speed(speedInt)
 		case "galaxy":
 			galaxy, err := strconv.ParseInt(values[0], 10, 64)
 			if err != nil {
@@ -890,13 +886,13 @@ func SendFleetHandler(c echo.Context) error {
 			if err != nil {
 				return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid type"))
 			}
-			where.Type = CelestialType(t)
+			where.Type = ogame.CelestialType(t)
 		case "mission":
 			missionInt, err := strconv.ParseInt(values[0], 10, 64)
 			if err != nil {
 				return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid mission"))
 			}
-			mission = MissionID(missionInt)
+			mission = ogame.MissionID(missionInt)
 		case "duration":
 			duration, err = strconv.ParseInt(values[0], 10, 64)
 			if err != nil {
@@ -928,21 +924,21 @@ func SendFleetHandler(c echo.Context) error {
 		}
 	}
 
-	fleet, err := bot.SendFleet(CelestialID(planetID), ships, speed, where, mission, payload, duration, unionID)
+	fleet, err := bot.SendFleet(ogame.CelestialID(planetID), ships, speed, where, mission, payload, duration, unionID)
 	if err != nil &&
-		(err == ErrInvalidPlanetID ||
-			err == ErrNoShipSelected ||
-			err == ErrUninhabitedPlanet ||
-			err == ErrNoDebrisField ||
-			err == ErrPlayerInVacationMode ||
-			err == ErrAdminOrGM ||
-			err == ErrNoAstrophysics ||
-			err == ErrNoobProtection ||
-			err == ErrPlayerTooStrong ||
-			err == ErrNoMoonAvailable ||
-			err == ErrNoRecyclerAvailable ||
-			err == ErrNoEventsRunning ||
-			err == ErrPlanetAlreadyReservedForRelocation) {
+		(err == ogame.ErrInvalidPlanetID ||
+			err == ogame.ErrNoShipSelected ||
+			err == ogame.ErrUninhabitedPlanet ||
+			err == ogame.ErrNoDebrisField ||
+			err == ogame.ErrPlayerInVacationMode ||
+			err == ogame.ErrAdminOrGM ||
+			err == ogame.ErrNoAstrophysics ||
+			err == ogame.ErrNoobProtection ||
+			err == ogame.ErrPlayerTooStrong ||
+			err == ogame.ErrNoMoonAvailable ||
+			err == ogame.ErrNoRecyclerAvailable ||
+			err == ogame.ErrNoEventsRunning ||
+			err == ogame.ErrPlanetAlreadyReservedForRelocation) {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
 	}
 	if err != nil {
@@ -953,31 +949,18 @@ func SendFleetHandler(c echo.Context) error {
 
 // GetAlliancePageContentHandler ...
 func GetAlliancePageContentHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	allianceID := c.QueryParam("allianceId")
 	vals := url.Values{"allianceId": {allianceID}}
 	pageHTML, _ := bot.GetAlliancePageContent(vals)
 	return c.HTML(http.StatusOK, string(pageHTML))
 }
 
-func replaceHostname(bot *OGame, html []byte) []byte {
-	serverURLBytes := []byte(bot.serverURL)
-	apiNewHostnameBytes := []byte(bot.apiNewHostname)
-	escapedServerURL := bytes.Replace(serverURLBytes, []byte("/"), []byte(`\/`), -1)
-	doubleEscapedServerURL := bytes.Replace(serverURLBytes, []byte("/"), []byte("\\\\\\/"), -1)
-	escapedAPINewHostname := bytes.Replace(apiNewHostnameBytes, []byte("/"), []byte(`\/`), -1)
-	doubleEscapedAPINewHostname := bytes.Replace(apiNewHostnameBytes, []byte("/"), []byte("\\\\\\/"), -1)
-	html = bytes.Replace(html, serverURLBytes, apiNewHostnameBytes, -1)
-	html = bytes.Replace(html, escapedServerURL, escapedAPINewHostname, -1)
-	html = bytes.Replace(html, doubleEscapedServerURL, doubleEscapedAPINewHostname, -1)
-	return html
-}
-
 // GetStaticHandler ...
 func GetStaticHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 
-	newURL := bot.serverURL + c.Request().URL.String()
+	newURL := bot.ServerURL() + c.Request().URL.String()
 	req, err := http.NewRequest("GET", newURL, nil)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
@@ -988,7 +971,7 @@ func GetStaticHandler(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
 	defer resp.Body.Close()
-	body, _, err := readBody(resp)
+	body, _, err := ogame.ReadBody(resp)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
@@ -1004,7 +987,7 @@ func GetStaticHandler(c echo.Context) error {
 	}
 
 	if strings.Contains(c.Request().URL.String(), ".xml") {
-		body = replaceHostname(bot, body)
+		body = ogame.ReplaceHostname(bot, body)
 		return c.Blob(http.StatusOK, "application/xml", body)
 	}
 
@@ -1022,32 +1005,32 @@ func GetStaticHandler(c echo.Context) error {
 
 // GetFromGameHandler ...
 func GetFromGameHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	vals := url.Values{"page": {"ingame"}, "component": {"overview"}}
 	if len(c.QueryParams()) > 0 {
 		vals = c.QueryParams()
 	}
 	pageHTML, _ := bot.GetPageContent(vals)
-	pageHTML = replaceHostname(bot, pageHTML)
+	pageHTML = ogame.ReplaceHostname(bot, pageHTML)
 	return c.HTMLBlob(http.StatusOK, pageHTML)
 }
 
 // PostToGameHandler ...
 func PostToGameHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	vals := url.Values{"page": {"ingame"}, "component": {"overview"}}
 	if len(c.QueryParams()) > 0 {
 		vals = c.QueryParams()
 	}
 	payload, _ := c.FormParams()
 	pageHTML, _ := bot.PostPageContent(vals, payload)
-	pageHTML = replaceHostname(bot, pageHTML)
+	pageHTML = ogame.ReplaceHostname(bot, pageHTML)
 	return c.HTMLBlob(http.StatusOK, pageHTML)
 }
 
 // GetStaticHEADHandler ...
 func GetStaticHEADHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	newURL := "/api/" + strings.Join(c.ParamValues(), "") // + "?" + c.QueryString()
 	if len(c.QueryString()) > 0 {
 		newURL = newURL + "?" + c.QueryString()
@@ -1071,7 +1054,7 @@ func GetStaticHEADHandler(c echo.Context) error {
 
 // GetEmpireHandler ...
 func GetEmpireHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	nbr, err := strconv.ParseInt(c.Param("typeID"), 10, 64)
 	if err != nil || nbr > 1 {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid typeID"))
@@ -1085,7 +1068,7 @@ func GetEmpireHandler(c echo.Context) error {
 
 // DeleteMessageHandler ...
 func DeleteMessageHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	messageID, err := strconv.ParseInt(c.Param("messageID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid message id"))
@@ -1098,7 +1081,7 @@ func DeleteMessageHandler(c echo.Context) error {
 
 // DeleteEspionageMessagesHandler ...
 func DeleteEspionageMessagesHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	if err := bot.DeleteAllMessagesFromTab(20); err != nil { // 20 = Espionage Reports
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "Unable to delete Espionage Reports"))
 	}
@@ -1107,7 +1090,7 @@ func DeleteEspionageMessagesHandler(c echo.Context) error {
 
 // DeleteMessagesFromTabHandler ...
 func DeleteMessagesFromTabHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	tabIndex, err := strconv.ParseInt(c.Param("tabIndex"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "must provide tabIndex"))
@@ -1130,7 +1113,7 @@ func DeleteMessagesFromTabHandler(c echo.Context) error {
 
 // SendIPMHandler ...
 func SendIPMHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	ipmAmount, err := strconv.ParseInt(c.Param("ipmAmount"), 10, 64)
 	if err != nil || ipmAmount < 1 {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid ipmAmount"))
@@ -1140,11 +1123,11 @@ func SendIPMHandler(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
 	}
 	galaxy, err := strconv.ParseInt(c.Request().PostFormValue("galaxy"), 10, 64)
-	if err != nil || galaxy < 1 || galaxy > bot.serverData.Galaxies {
+	if err != nil || galaxy < 1 || galaxy > bot.GetServerData().Galaxies {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid galaxy"))
 	}
 	system, err := strconv.ParseInt(c.Request().PostFormValue("system"), 10, 64)
-	if err != nil || system < 1 || system > bot.serverData.Systems {
+	if err != nil || system < 1 || system > bot.GetServerData().Systems {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid system"))
 	}
 	position, err := strconv.ParseInt(c.Request().PostFormValue("position"), 10, 64)
@@ -1155,13 +1138,13 @@ func SendIPMHandler(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
 	}
-	planetType := CelestialType(planetTypeInt)
-	if planetType != PlanetType && planetType != MoonType { // only accept planet/moon types
+	planetType := ogame.CelestialType(planetTypeInt)
+	if planetType != ogame.PlanetType && planetType != ogame.MoonType { // only accept planet/moon types
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid type"))
 	}
 	priority, _ := strconv.ParseInt(c.Request().PostFormValue("priority"), 10, 64)
-	coord := Coordinate{Type: planetType, Galaxy: galaxy, System: system, Position: position}
-	duration, err := bot.SendIPM(PlanetID(planetID), coord, ipmAmount, ID(priority))
+	coord := ogame.Coordinate{Type: planetType, Galaxy: galaxy, System: system, Position: position}
+	duration, err := bot.SendIPM(ogame.PlanetID(planetID), coord, ipmAmount, ogame.ID(priority))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
 	}
@@ -1170,7 +1153,7 @@ func SendIPMHandler(c echo.Context) error {
 
 // TeardownHandler ...
 func TeardownHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	planetID, err := strconv.ParseInt(c.Param("planetID"), 10, 64)
 	if err != nil || planetID < 0 {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
@@ -1179,7 +1162,7 @@ func TeardownHandler(c echo.Context) error {
 	if err != nil || planetID < 0 {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid ogame id"))
 	}
-	if err = bot.TearDown(CelestialID(planetID), ID(ogameID)); err != nil {
+	if err = bot.TearDown(ogame.CelestialID(planetID), ogame.ID(ogameID)); err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
 	}
 	return c.JSON(http.StatusOK, SuccessResp(nil))
@@ -1187,7 +1170,7 @@ func TeardownHandler(c echo.Context) error {
 
 // GetAuctionHandler ...
 func GetAuctionHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	auction, err := bot.GetAuction()
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "could not open auction page"))
@@ -1197,8 +1180,8 @@ func GetAuctionHandler(c echo.Context) error {
 
 // DoAuctionHandler (`celestialID=metal:crystal:deuterium` eg: `123456=123:456:789`)
 func DoAuctionHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
-	bid := make(map[CelestialID]Resources)
+	bot := c.Get("bot").(*ogame.OGame)
+	bid := make(map[ogame.CelestialID]ogame.Resources)
 	if err := c.Request().ParseForm(); err != nil { // Required for PostForm, not for PostFormValue
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid form"))
 	}
@@ -1212,7 +1195,7 @@ func DoAuctionHandler(c echo.Context) error {
 			if err != nil {
 				return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid celestial ID"))
 			}
-			bid[CelestialID(celestialIDInt)] = Resources{Metal: metal, Crystal: crystal, Deuterium: deuterium}
+			bid[ogame.CelestialID(celestialIDInt)] = ogame.Resources{Metal: metal, Crystal: crystal, Deuterium: deuterium}
 		}
 	}
 	if err := bot.DoAuction(bid); err != nil {
@@ -1223,7 +1206,7 @@ func DoAuctionHandler(c echo.Context) error {
 
 // PhalanxHandler ...
 func PhalanxHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	moonID, err := strconv.ParseInt(c.Param("moonID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid moon id"))
@@ -1240,8 +1223,8 @@ func PhalanxHandler(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid position"))
 	}
-	coord := Coordinate{Type: PlanetType, Galaxy: galaxy, System: system, Position: position}
-	fleets, err := bot.Phalanx(MoonID(moonID), coord)
+	coord := ogame.Coordinate{Type: ogame.PlanetType, Galaxy: galaxy, System: system, Position: position}
+	fleets, err := bot.Phalanx(ogame.MoonID(moonID), coord)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
 	}
@@ -1250,7 +1233,7 @@ func PhalanxHandler(c echo.Context) error {
 
 // JumpGateHandler ...
 func JumpGateHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	if err := c.Request().ParseForm(); err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid form"))
 	}
@@ -1262,25 +1245,25 @@ func JumpGateHandler(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid destination moon id"))
 	}
-	var ships ShipsInfos
+	var ships ogame.ShipsInfos
 	for key, values := range c.Request().PostForm {
 		switch key {
 		case "ships":
 			for _, s := range values {
 				a := strings.Split(s, ",")
 				shipID, err := strconv.ParseInt(a[0], 10, 64)
-				if err != nil || !IsShipID(shipID) {
+				if err != nil || !ogame.IsShipID(shipID) {
 					return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid ship id "+a[0]))
 				}
 				nbr, err := strconv.ParseInt(a[1], 10, 64)
 				if err != nil || nbr < 0 {
 					return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid nbr "+a[1]))
 				}
-				ships.Set(ID(shipID), nbr)
+				ships.Set(ogame.ID(shipID), nbr)
 			}
 		}
 	}
-	success, rechargeCountdown, err := bot.JumpGate(MoonID(moonOriginID), MoonID(moonDestinationID), ships)
+	success, rechargeCountdown, err := bot.JumpGate(ogame.MoonID(moonOriginID), ogame.MoonID(moonDestinationID), ships)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
 	}
@@ -1292,12 +1275,12 @@ func JumpGateHandler(c echo.Context) error {
 
 // TechsHandler ...
 func TechsHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	celestialID, err := strconv.ParseInt(c.Param("celestialID"), 10, 64)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid celestial id"))
 	}
-	supplies, facilities, ships, defenses, researches, err := bot.GetTechs(CelestialID(celestialID))
+	supplies, facilities, ships, defenses, researches, err := bot.GetTechs(ogame.CelestialID(celestialID))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
 	}
@@ -1310,9 +1293,10 @@ func TechsHandler(c echo.Context) error {
 	}))
 }
 
+/*
 // GetCaptchaHandler ...
 func GetCaptchaHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 
 	gameEnvironmentID, platformGameID, err := getConfiguration(bot)
 	if err != nil {
@@ -1397,10 +1381,9 @@ func GetCaptchaHandler(c echo.Context) error {
 	}
 	return c.HTML(http.StatusOK, "no captcha found")
 }
-
 // GetCaptchaImgHandler ...
 func GetCaptchaImgHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	challengeID := c.Param("challengeID")
 	req, _ := http.NewRequest("GET", "https://image-drop-challenge.gameforge.com/challenge/"+challengeID+"/en-GB/drag-icons", nil)
 	resp, _ := bot.doReqWithLoginProxyTransport(req)
@@ -1415,7 +1398,7 @@ func GetCaptchaImgHandler(c echo.Context) error {
 
 // GetCaptchaTextHandler ...
 func GetCaptchaTextHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	challengeID := c.Param("challengeID")
 	//TEXT: https://image-drop-challenge.gameforge.com/challenge/9c5c46b2-e479-4f17-bd35-03bc4e5beefc/en-GB/text?1611748479816
 	req, _ := http.NewRequest("GET", "https://image-drop-challenge.gameforge.com/challenge/"+challengeID+"/en-GB/text", nil)
@@ -1430,7 +1413,7 @@ func GetCaptchaTextHandler(c echo.Context) error {
 
 // GetCaptchaSolverHandler ...
 func GetCaptchaSolverHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
+	bot := c.Get("bot").(*ogame.OGame)
 	challengeID := c.Request().PostFormValue("challenge_id")
 	answer := c.Request().PostFormValue("answer")
 	payload := `{"answer":` + answer + `}`
@@ -1446,3 +1429,5 @@ func GetCaptchaSolverHandler(c echo.Context) error {
 	}
 	return c.Redirect(http.StatusTemporaryRedirect, "/")
 }
+
+*/
