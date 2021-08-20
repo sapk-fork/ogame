@@ -949,6 +949,14 @@ func TestExtractShipsV7(t *testing.T) {
 	assert.Equal(t, int64(9), ships.Crawler)
 }
 
+func TestExtractShipsV8(t *testing.T) {
+	pageHTMLBytes, _ := ioutil.ReadFile("samples/v8.1/fr/shipyard.html")
+	ships, _ := NewExtractorV7().ExtractShips(pageHTMLBytes)
+	assert.Equal(t, int64(6), ships.SmallCargo)
+	assert.Equal(t, int64(1), ships.ColonyShip)
+	assert.Equal(t, int64(9), ships.Crawler)
+}
+
 func TestExtractShipsV7_build(t *testing.T) {
 	pageHTMLBytes, _ := ioutil.ReadFile("samples/v7/shipyard_build.html")
 	ships, _ := NewExtractorV7().ExtractShips(pageHTMLBytes)
